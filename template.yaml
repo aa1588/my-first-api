@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: My REST API
+
+# Global settings applied to ALL functions unless overridden
+Globals:
+  Function:
+    Runtime: java21
+    Architectures: [x86_64]
+    MemorySize: 512
+    Timeout: 30
+    Environment:
+      Variables:
+        ENV: !Ref Environment
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+
+  # The API Gateway
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+
+  # The Lambda Function
+  GetUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "get-user-${Environment}"
+      CodeUri: HelloWorldFunction/
+      Handler: helloworld.App::handleRequest
+      Events:
+        GetUser:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MyApi
+            Path: /users/{id}
+            Method: GET
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/users"
